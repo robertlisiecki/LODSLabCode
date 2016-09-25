@@ -1,0 +1,108 @@
+      // POST Messages/SendMail
+      [Authorize]
+      [HttpPost]
+      public async Task<ActionResult> SendMail(string messageId, string recipients,  string subject, string body)
+      {
+          if (string.IsNullOrEmpty(subject) || string.IsNullOrEmpty(recipients))
+          {
+              TempData["error"] = "Please fill in all fields";
+          }
+          else
+          {
+              List<Recipient> mailRecipients = new List<Recipient>();
+              if (!buildRecipients(recipients, mailRecipients))
+
+              {
+                  TempData["error"] = "Please provide valid email addresses";
+              }
+              var client = GetGraphServiceClient();
+              ItemBody CurrentBody = new ItemBody();
+              CurrentBody.Content = (string.IsNullOrEmpty(body) ? "" : body);
+
+              Message newMessage = new Message()
+              {
+                  Subject = subject,
+                  Body = CurrentBody,
+                  ToRecipients = mailRecipients
+              };
+              var request = client.Me.SendMail(newMessage, true).Request();
+
+              try
+              {
+                  await request.PostAsync();
+              }
+              catch (ServiceException ex)
+              {
+                  TempData["error"] = ex.Error.Message;
+              }
+          }
+
+          return RedirectToAction("Index", new { messageId = messageId });
+      }
+
+      const string SEMICOLON = ";";
+      const string PERIOD = ".";
+      const string AT = "@";
+      const string SPACE = " ";
+
+      private bool buildRecipients(string strRecipients, List<Recipient> Recipients)
+      {
+          int iSemiColonPos = -1;
+          string strTemp = strRecipients.Trim();
+          string strEmailAddress = null;
+          Recipient recipient = new Recipient();
+
+          while (strTemp.Length != 0)
+          {
+              iSemiColonPos = strTemp.IndexOf(SEMICOLON);
+              if (iSemiColonPos != -1)
+              {
+                  strEmailAddress = strTemp.Substring(0, iSemiColonPos);
+                  strTemp = strTemp.Substring(iSemiColonPos + 1).Trim();
+              }
+              else
+              {
+                  strEmailAddress = strTemp;
+                  strTemp = "";
+              }
+              int iAt = strEmailAddress.IndexOf(AT);
+              int iPeriod = strEmailAddress.LastIndexOf(PERIOD);
+              if ((iAt != -1) && (iPeriod != -1) && (strEmailAddress.LastIndexOf(SPACE) == -1) && (iPeriod > iAt))
+              {
+                  EmailAddress mailAddress = new EmailAddress();
+                  mailAddress.Address = strEmailAddress;
+                  Recipient mailRecipient = new Recipient();
+                  mailRecipient.EmailAddress = mailAddress;
+                  Recipients.Add(mailRecipient);
+              }
+              else
+              {
+                  return false;
+              }
+              strEmailAddress = null;
+
+          }
+          return true;
+}
+Add code to the MailController class
+Add the following code to the MailController class to reply to a mail. (copy the below and paste into the virtual machine)
+
+      [Authorize]
+      [HttpPost]
+      public async Task<ActionResult> Reply(string messageId, string comment)
+      {
+          var client = GetGraphServiceClient();
+
+          var request = client.Me.Messages[messageId].Reply(comment).Request();
+
+          try
+          {
+              await request.PostAsync();
+          }
+          catch (ServiceException ex)
+          {
+              return RedirectToAction("Index", "Error", new { message = ex.Error.Message });
+          }
+
+          return RedirectToAction("Detail", new { messageId = messageId });
+}
