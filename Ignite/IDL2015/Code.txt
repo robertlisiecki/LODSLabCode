@@ -1,4 +1,4 @@
-//helper methods
+﻿//helper methods
 
   function getOOXMLForTemplate() {
       //retrieves the initial template! with OOXML we can achieve wonders!
