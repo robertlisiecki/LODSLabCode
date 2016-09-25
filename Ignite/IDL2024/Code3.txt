@@ -1,0 +1,154 @@
+<head>
+<style type="text/css">
+    .auto-style9 {
+        height: 404px;
+    }
+    .auto-style10 {
+        width: 601px;
+    }
+    .auto-style11 {
+        width: 575px;
+    }
+    .auto-style12 {
+        width: 461px;
+    }
+</style>
+</head>
+@model Microsoft.Graph.Message
+@{ ViewBag.Title = "Detail"; }
+<h2>@Model.Subject</h2>
+@section scripts {
+<script type="text/javascript">
+$(function () {
+$('#start-picker').datetimepicker({ format: 'YYYY-MM-DDTHH:mm:ss', sideBySide: true });
+$('#end-picker').datetimepicker({ format: 'YYYY-MM-DDTHH:mm:ss', sideBySide: true });
+});
+</script>
+}
+<div class="row" style="margin-top:50px;">
+<div class="col-sm-12">
+    @if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+    {
+        <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+    }
+
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <table>
+                <th>Respond to Message<th>
+                <tbody>
+                    <tr>
+                        <form class="form-inline" action="/Mail/Reply" method="post">
+                            <td class="auto-style10">
+                               <input type="text" class="auto-style11" name="comment" id="comment" placeholder="Comment" />
+                            </td>
+
+                            <td class="auto-style3">
+                                <input type="hidden" name="messageId" value="@Request.Params["messageId"]" />
+                                <button type="submit" name="Reply" class="btn btn-default">Reply</button>
+                            </td>
+                        </form>
+                    </tr>
+                    <br />
+                    <tr>
+                        <form class="form-inline" action="/Mail/ReplyAll" method="post">
+                            <td class="auto-style10">
+                                <input type="text" class="auto-style11" name="comment" id="comment" placeholder="Comment" />
+                            </td>
+
+                            <td>
+                                <input type="hidden" name="messageId" value="@Request.Params["messageId"]" />
+                                <button type="submit" name="Reply All" class="btn btn-default">Reply All</button>
+                            </td>
+                        </form>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table id="messageTable" class="table table-striped table-bordered">
+            <th class="auto-style12">Details</th>
+            <tbody>
+                <tr>
+                    <td class="auto-style12">From:</td>
+                    <td>
+                        @Model.From.EmailAddress.Name
+                    </td>
+                </tr>
+                <tr>
+                    <td class="auto-style12">To:</td>
+                    <td>
+                        @{
+                            string toRecipients = "";
+
+                            foreach (var To in Model.ToRecipients)
+                            {
+                                toRecipients = toRecipients + To.EmailAddress.Name + "; ";
+                            }
+                        }
+                        @toRecipients
+                    </td>
+                </tr>
+                <tr>
+                    <td class="auto-style12">Cc:</td>
+                    <td>
+                        @{
+                            string ccRecipients = "";
+
+                            foreach (var To in Model.CcRecipients)
+                            {
+                                ccRecipients = ccRecipients + To.EmailAddress.Name + "; ";
+                            }
+                        }
+                        @ccRecipients
+                    </td>
+                </tr>
+                <tr>
+                    <td class="auto-style12">Received:</td>
+                    <td>
+                        @{
+                            if (null != Model.ReceivedDateTime)
+                            {
+                                @Model.ReceivedDateTime
+                            }
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td class="auto-style12">Has Attachments:</td>
+                    <td>
+                        @{
+                            if (null != Model.HasAttachments)
+                            {
+                                @((bool)Model.HasAttachments ? "Yes" : "No")
+                            }
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td class="auto-style12">Web link:</td>
+                    <td>
+                        @{
+                            if (null != Model.WebLink)
+                            {
+                                <a href="@Model.WebLink">Message OWA link </a>
+                            }
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td class="auto-style12">Body:</td>
+                    <td>
+                        <div>
+                            <iframe id="mailBody" width="800" src="@(string.Format("/Mail/GetMessageBody/?messageId={0}", Model.Id))" class="auto-style9"/>    
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+</div>
