@@ -1,0 +1,101 @@
+        // POST Me/Events?eventId=<id>&subject=<text>&start=<text>&end=<text>&location=<text>
+        [Authorize]
+        [HttpPost]
+        public async Task<ActionResult> AddEvent(string eventId, string attendees, string subject, string body, string start, string end, string location)
+        {
+            if (string.IsNullOrEmpty(subject) || string.IsNullOrEmpty(start)
+              || string.IsNullOrEmpty(end) || string.IsNullOrEmpty(location))
+            {
+                TempData["error"] = "Please fill in all fields";
+            }
+
+            else
+            {
+                bool IsPersonalAppointment = true;
+                List<Attendee> eventAttendees = new List<Attendee>();
+                if (!string.IsNullOrEmpty(attendees))
+                {
+                    IsPersonalAppointment = false;
+
+
+                    if (!buildRecipients(attendees, eventAttendees))
+
+                    {
+                        TempData["error"] = "Please provide valid email addresses";
+                    }
+                }
+
+                var client = GetGraphServiceClient();
+
+                var request = client.Me.Events.Request();
+
+                ItemBody CurrentBody = new ItemBody();
+                CurrentBody.Content = (string.IsNullOrEmpty(body) ? "" : body);
+                Event newEvent = new Event()
+                {
+                    Subject = subject,
+                    Body = CurrentBody,
+                    Start = new DateTimeTimeZone() { DateTime = start, TimeZone = "UTC" },
+                    End = new DateTimeTimeZone() { DateTime = end, TimeZone = "UTC" },
+                    Location = new Location() { DisplayName = location }
+                };
+                if (!IsPersonalAppointment)
+                    newEvent.Attendees = eventAttendees;
+
+                try
+                {
+                    await request.AddAsync(newEvent);
+                }
+                catch (ServiceException ex)
+                {
+                    TempData["error"] = ex.Error.Message;
+                }
+            }
+
+            return RedirectToAction("Index", new { eventId = eventId });
+        }
+
+        const string SEMICOLON = ";";
+        const string PERIOD = ".";
+        const string AT = "@";
+        const string SPACE = " ";
+
+        private bool buildRecipients(string strAttendees, List<Attendee> Attendees)
+        {
+            int iSemiColonPos = -1;
+            string strTemp = strAttendees.Trim();
+            string strEmailAddress = null;
+            Attendee attendee = new Attendee();
+
+            while (strTemp.Length != 0)
+            {
+                iSemiColonPos = strTemp.IndexOf(SEMICOLON);
+                if (iSemiColonPos != -1)
+                {
+                    strEmailAddress = strTemp.Substring(0, iSemiColonPos);
+                    strTemp = strTemp.Substring(iSemiColonPos + 1).Trim();
+                }
+                else
+                {
+                    strEmailAddress = strTemp;
+                    strTemp = "";
+                }
+                int iAt = strEmailAddress.IndexOf(AT);
+                int iPeriod = strEmailAddress.LastIndexOf(PERIOD);
+                if ((iAt != -1) && (iPeriod != -1) && (strEmailAddress.LastIndexOf(SPACE) == -1) && (iPeriod > iAt))
+                {
+                    EmailAddress mailAddress = new EmailAddress();
+                    mailAddress.Address = strEmailAddress;
+                    Attendee eventAttendee = new Attendee();
+                    eventAttendee.EmailAddress = mailAddress;
+                    Attendees.Add(eventAttendee);
+                }
+                else
+                {
+                    return false;
+                }
+                strEmailAddress = null;
+
+            }
+            return true;
+        }
